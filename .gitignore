@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Node
+node_modules/
+package-lock.json
+
+# Yarn
+yarn.lock
+yarn-error.log
+
+# Cache
+.cache/
+.eslintcache
+.tsbuildinfo
+
+# Testing
+coverage/
+
+# Misc
+*.local
