@@ -3,6 +3,17 @@
 @tailwind components;
 @tailwind utilities;
 
+@theme dark {
+  --color-primary: rgb(10, 14, 26);
+  --color-secondary: rgb(33, 35, 40);
+  --color-tertiary: rgb(44, 47, 54);
+  --color-quaternary: rgb(55, 58, 65);
+  --color-quinary: rgb(66, 69, 76);
+  --color-senary: rgb(77, 80, 87);
+  --color-septenary: rgb(88, 91, 98);
+  --color-octonary: rgb(99, 102, 109);
+}
+
 /* Base styles */
 body {
   @apply antialiased text-gray-900;

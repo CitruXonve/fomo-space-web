@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Spinner } from "@/components/Spinner";
 import { Popup } from "@/components/Popup";
-import { Button } from "@/components/Button";
+import Button from "@/components/Button";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import axios, { AxiosRequestConfig } from "axios";
 import ReactMarkdown from "react-markdown";
@@ -30,7 +30,7 @@ async function get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
 export async function post<T, D = unknown>(
   url: string,
   data?: D,
-  config?: AxiosRequestConfig
+  config?: AxiosRequestConfig,
 ): Promise<T> {
   const response = await apiClient.post<T>(url, data, config);
   return response.data;
@@ -41,7 +41,7 @@ async function postChatStreamSSE(
   message: string,
   onChunk: (chunk: string) => void,
   onComplete?: () => void,
-  onError?: (error: Error) => void
+  onError?: (error: Error) => void,
 ): Promise<void> {
   try {
     const response = await fetch("/api/chat-stream", {
@@ -124,7 +124,7 @@ export function usePostChat() {
 
 export const useChatStreamMutation = (
   onChunk: (chunk: string) => void,
-  onComplete?: () => void
+  onComplete?: () => void,
 ) => {
   return useMutation({
     mutationFn: async (message: string) => {
@@ -154,7 +154,7 @@ export const ChatBox = () => {
       },
       () => {
         // This is called when streaming is complete
-      }
+      },
     );
 
   const testQuery = useTestQuery(false);
@@ -177,7 +177,7 @@ export const ChatBox = () => {
         const response = data as ChatResponse;
         if (response.status !== "success") {
           throw new Error(
-            "Failed to get reply" + JSON.stringify(response.messages)
+            "Failed to get reply" + JSON.stringify(response.messages),
           );
         }
         const answer =
@@ -196,24 +196,27 @@ export const ChatBox = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center bg-white py-3 rounded-lg shadow-sm border w-full max-w-2xl">
+    <div className="flex flex-col items-center justify-center dark:bg-white/5 bg-white py-3 rounded-lg border-1 border-solid border-gray-200 dark:border-gray-700 shadow-sm w-full max-w-2xl">
       <form
-        className="flex flex-col gap-3 items-center justify-center w-full"
+        className="flex flex-col gap-3 items-center justify-center w-full px-4"
         onSubmit={(e) => {
           e.preventDefault();
         }}
       >
-        <h3 className="font-semibold my-2">What's the challenge today?</h3>
+        <h3 className="font-semibold dark:text-white">
+          What's the challenge today?
+        </h3>
         <textarea
           required
           placeholder="Prompt or describe the problem..."
-          className="w-150 mx-4 px-4 word-wrap break-words border-1 border-gray-300 rounded-md p-2 overflow-y-scroll max-w-100"
+          className="w-full mx-6 px-4 word-wrap break-words border-1 border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-950/50 dark:text-white rounded-md p-2 overflow-y-auto"
           ref={promptRef}
         />
-        <span className="flex gap-2">
+        <span className="flex flex-row justify-between gap-2">
           <Button
             onClick={handleTest}
-            className="primary rounded-md bg-gray-500 px-4 py-2 text-sm font-medium text-white focus:not-data-focus:outline-none data-focus:outline data-focus:outline-white data-hover:bg-black/30"
+            size="sm"
+            className="font-semibold bg-gray-500 data-hover:bg-gray-600 data-open:bg-gray-700 disabled:bg-gray-700"
             disabled={testQuery.isLoading}
           >
             {testQuery.isLoading ? <Spinner size="sm" /> : "Test"}
@@ -226,6 +229,8 @@ export const ChatBox = () => {
           />
           <Button
             type="submit"
+            size="sm"
+            className="font-semibold"
             disabled={isAnswerPosting}
             onClick={() => {
               if (!promptRef.current?.value) return;
@@ -236,7 +241,9 @@ export const ChatBox = () => {
           </Button>
           <Button
             type="submit"
-            className="bg-green-500 text-white"
+            size="sm"
+            variant="secondary"
+            className="font-semibold bg-green-500 text-white hover:bg-green-600 focus:ring-green-500 data-hover:bg-green-600 data-open:bg-green-700 disabled:bg-green-700"
             disabled={isStreamPosting}
             onClick={() => {
               if (!promptRef.current?.value) return;

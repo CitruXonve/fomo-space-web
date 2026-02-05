@@ -5,6 +5,9 @@ node_modules/
 dist/
 build/
 
+# Assets
+src/assets/
+
 # Environment
 .env
 .env.local
