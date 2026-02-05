@@ -1,13 +1,15 @@
+import PrimaryBackground from "../Background";
 import { ChatBox } from "../ChatBox";
 
 export default function HomePage() {
   return (
     <>
+      <PrimaryBackground />
       <div className="text-center relative z-10">
         <h1 className="text-2xl font-semibold text-white mb-4">
           Tension of Missing Out
         </h1>
-        <p className="text-senary dark:text-gray-400 mb-8 max-w-[70%] mx-auto word-wrap break-words">
+        <p className="text-gray-400 dark:text-gray-400 mb-8 max-w-[70%] mx-auto word-wrap break-words">
           There&apos;s always a chance to chase the &quot;asteroids&quot; that
           you may miss out.
         </p>
