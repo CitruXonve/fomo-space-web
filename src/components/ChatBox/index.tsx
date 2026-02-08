@@ -110,21 +110,20 @@ const useTestQuery = (enabled: boolean = true) =>
     enabled,
   });
 
-export function usePostChat() {
+export function usePostChat(onError?: (error: Error) => void) {
   return useMutation({
     mutationFn: (message: string) => {
       return chatApi.postChat(message);
     },
     onSuccess: () => {},
-    onError: (error) => {
-      console.log("onError", error);
-    },
+    onError,
   });
 }
 
 export const useChatStreamMutation = (
   onChunk: (chunk: string) => void,
   onComplete?: () => void,
+  onError?: (error: Error) => void,
 ) => {
   return useMutation({
     mutationFn: async (message: string) => {
@@ -132,19 +131,22 @@ export const useChatStreamMutation = (
         throw error;
       });
     },
-    onError: (error) => {
-      console.error("Stream error:", error);
-    },
+    onError,
   });
 };
 
 export const ChatBox = () => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const [popupTitle, _] = useState("Test LLM API");
+  const [popupTitle, setPopupTitle] = useState("");
   const [popupMessage, setPopupMessage] = useState("Test");
   const [answer, setAnswer] = useState("");
   const [streamingAnswer, setStreamingAnswer] = useState("");
-  const { mutate, isPending: isAnswerPosting } = usePostChat();
+  const { mutate, isPending: isAnswerPosting } = usePostChat((error) => {
+    console.error("Answer error:", error);
+    setPopupTitle("Answer API Error");
+    setPopupMessage(error.message ?? "Unknown error");
+    setIsPopupOpen(true);
+  });
 
   const { mutate: streamMutate, isPending: isStreamPosting } =
     useChatStreamMutation(
@@ -155,6 +157,12 @@ export const ChatBox = () => {
       () => {
         // This is called when streaming is complete
       },
+      (error) => {
+        console.error("Stream error:", error);
+        setPopupTitle("Stream API Error");
+        setPopupMessage(error.message ?? "Unknown error");
+        setIsPopupOpen(true);
+      },
     );
 
   const testQuery = useTestQuery(false);
@@ -163,7 +171,8 @@ export const ChatBox = () => {
     testQuery
       .refetch()
       .then(({ data }) => {
-        const message = (data as { message: string })?.message ?? "";
+        const message = (data as { message: string })?.message ?? "No response";
+        setPopupTitle("Test LLM API");
         setPopupMessage(message);
         setIsPopupOpen(true);
       })
