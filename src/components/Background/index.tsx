@@ -473,7 +473,7 @@ const LowerBackgroundMask = (
       stroke="white"
       filter="url(#strongGlow) blur(5px) opacity(0.25)"
       style={{
-        transform: "translateY(-300px)",
+        transform: "translateY(calc(-560px + 40vh))",
       }}
     >
       {/* Horizontal, diagonal star trails */}

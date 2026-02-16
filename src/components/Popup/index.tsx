@@ -1,4 +1,5 @@
 import Button from "@/components/Button";
+import { cn } from "@/utils/classname";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 
 interface PopupProps {
@@ -7,6 +8,7 @@ interface PopupProps {
   message?: string;
   onClose?: () => void;
   clickOutsideToClose?: boolean;
+  className?: string;
 }
 
 export const Popup = (props: PopupProps) => {
@@ -16,19 +18,23 @@ export const Popup = (props: PopupProps) => {
     message = "Default Text",
     onClose = () => {},
     clickOutsideToClose = false,
+    className,
   } = props;
   return (
     <Dialog
       open={isOpen}
       as="div"
       onClose={clickOutsideToClose ? onClose : () => {}}
-      className="relative z-10 focus:outline-none"
+      className={"relative z-10 focus:outline-none"}
     >
       <div className="fixed inset-0 z-10 w-screen overflow-y-auto backdrop-blur-sm data-closed:opacity-0">
         <div className="flex min-h-full items-center justify-center p-4">
           <DialogPanel
             transition
-            className="w-full max-w-md rounded-xl bg-white/95 p-6 border-1 border-gray-300 shadow-2xl backdrop-blur-2xl duration-300 ease-out data-closed:transform-[scale(95%)] data-closed:opacity-0"
+            className={cn(
+              "w-full max-w-md rounded-xl bg-white/95 p-6 border-1 border-gray-300 shadow-2xl backdrop-blur-2xl duration-300 ease-out data-closed:transform-[scale(95%)] data-closed:opacity-0",
+              className,
+            )}
           >
             <DialogTitle as="h3" className="text-base/7 font-medium text-black">
               {title}

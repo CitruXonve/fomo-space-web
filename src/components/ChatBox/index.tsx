@@ -5,6 +5,7 @@ import Button from "@/components/Button";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import axios, { AxiosRequestConfig } from "axios";
 import ReactMarkdown from "react-markdown";
+import { cn } from "@/utils/classname";
 
 interface ApiResponse<T> {
   messages: Array<T>;
@@ -167,6 +168,19 @@ export const ChatBox = () => {
 
   const testQuery = useTestQuery(false);
   const promptRef = useRef<HTMLTextAreaElement>(null);
+  const MAX_TEXTAREA_HEIGHT = 120; // ~max-h-30 (7.5rem), roughly 5 lines of text
+
+  const resizeTextarea = () => {
+    const textarea = promptRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(
+      textarea.scrollHeight +
+        5 /* expand slightly to avoid unnecessary scrolling */,
+      MAX_TEXTAREA_HEIGHT,
+    )}px`;
+  };
+
   const handleTest = () => {
     testQuery
       .refetch()
@@ -204,10 +218,36 @@ export const ChatBox = () => {
     streamMutate(prompt);
   };
 
+  const handleValidation = (
+    value: string | undefined,
+    onSubmit: (value: string) => void,
+  ) => {
+    if (!value) {
+      setPopupTitle("Don't leave it blank");
+      setPopupMessage("Please fill out this field and try again.");
+      setIsPopupOpen(true);
+      return;
+    }
+    onSubmit(value);
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center dark:bg-white/5 bg-white py-3 rounded-lg border-1 border-solid border-gray-200 dark:border-gray-700 shadow-sm w-full max-w-2xl">
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center",
+        "dark:bg-gray-900/50 bg-white py-4 rounded-lg border-1 border-solid border-gray-200 dark:border-gray-700 shadow-sm w-full max-w-2xl overflow-x-auto backdrop-blur-md",
+      )}
+    >
+      <Popup
+        isOpen={isPopupOpen}
+        title={popupTitle}
+        message={popupMessage}
+        onClose={() => setIsPopupOpen(false)}
+        className="dark:bg-white/80"
+      />
       <form
         className="flex flex-col gap-3 items-center justify-center w-full px-4"
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
         }}
@@ -218,33 +258,35 @@ export const ChatBox = () => {
         <textarea
           required
           placeholder="Prompt or describe the problem..."
-          className="w-full mx-6 px-4 word-wrap break-words border-1 border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-950/50 dark:text-white rounded-md p-2 overflow-y-auto"
+          className={cn(
+            "w-full min-h-18 max-h-30 mx-6 px-4 word-wrap break-words",
+            "border-1 border-gray-300 dark:border-gray-900",
+            "bg-gray-100 dark:bg-gray-950/75 dark:text-white",
+            "rounded-sm p-2 overflow-y-auto resize-none backdrop-blur-lg",
+          )}
           ref={promptRef}
+          onInput={resizeTextarea}
+          style={{
+            boxShadow: "none",
+          }}
         />
-        <span className="flex flex-row justify-between gap-2">
+        <span className="flex max-[300px]:flex-col justify-between gap-2">
           <Button
             onClick={handleTest}
             size="sm"
-            className="font-semibold bg-gray-500 data-hover:bg-gray-600 data-open:bg-gray-700 disabled:bg-gray-700"
+            className="font-semibold bg-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:border-1 data-hover:bg-gray-600 data-open:bg-gray-700 disabled:bg-gray-700"
             disabled={testQuery.isLoading}
           >
             {testQuery.isLoading ? <Spinner size="sm" /> : "Test"}
           </Button>
-          <Popup
-            isOpen={isPopupOpen}
-            title={popupTitle}
-            message={popupMessage}
-            onClose={() => setIsPopupOpen(false)}
-          />
           <Button
             type="submit"
             size="sm"
-            className="font-semibold"
+            className="font-semibold dark:border-blue-600 dark:border-1 dark:bg-gray-900/75"
             disabled={isAnswerPosting}
-            onClick={() => {
-              if (!promptRef.current?.value) return;
-              handleSend(promptRef.current.value);
-            }}
+            onClick={() =>
+              handleValidation(promptRef.current?.value?.trim(), handleSend)
+            }
           >
             {isAnswerPosting ? <Spinner size="sm" /> : "Send"}
           </Button>
@@ -252,12 +294,14 @@ export const ChatBox = () => {
             type="submit"
             size="sm"
             variant="secondary"
-            className="font-semibold bg-green-500 text-white hover:bg-green-600 focus:ring-green-500 data-hover:bg-green-600 data-open:bg-green-700 disabled:bg-green-700"
+            className="font-semibold bg-green-500 text-white hover:bg-green-600 focus:ring-green-500 data-hover:bg-green-600 data-open:bg-green-700 disabled:bg-green-700 dark:bg-gray-900/75 dark:border-green-600 dark:border-1"
             disabled={isStreamPosting}
-            onClick={() => {
-              if (!promptRef.current?.value) return;
-              handleStreamSend(promptRef.current.value);
-            }}
+            onClick={() =>
+              handleValidation(
+                promptRef.current?.value?.trim(),
+                handleStreamSend,
+              )
+            }
           >
             {isStreamPosting ? <Spinner size="sm" /> : "Stream"}
           </Button>

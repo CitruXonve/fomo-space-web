@@ -7,9 +7,15 @@ import HomePage from "./components/HomePage";
 
 function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-primary dark:bg-secondary">
+    <div className="absolute top-0 left-0 w-[100vw] min-h-screen bg-primary dark:bg-secondary">
       {/* Header - Navigation */}
-      <NavHeader />
+      <NavHeader
+        items={[
+          { label: "Home", to: "/" },
+          { label: "About", to: "#" },
+          { label: "Contact", to: "#" },
+        ]}
+      />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">{children}</main>
