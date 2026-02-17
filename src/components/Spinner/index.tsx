@@ -33,7 +33,7 @@ export const Spinner: React.FC<SpinnerProps> = ({ size = "md", className }) => {
 
 import React, { useEffect, useRef, useState } from "react";
 
-export const Dots = ({ className }: { className?: string }) => {
+export const InlineDots = (): string => {
   const dotStates = [".", "..", "..."];
   const [index, setIndex] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -47,9 +47,13 @@ export const Dots = ({ className }: { className?: string }) => {
     };
   }, []);
 
+  return dotStates[index];
+};
+
+export const FullWidthDots = ({ className }: { className?: string }) => {
   return (
     <span className={className} aria-live="polite">
-      {dotStates[index]}
+      {InlineDots()}
     </span>
   );
 };

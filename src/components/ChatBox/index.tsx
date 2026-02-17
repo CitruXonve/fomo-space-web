@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Dots, Spinner } from "@/components/Spinner";
+import { InlineDots, Spinner } from "@/components/Spinner";
 import { Popup } from "@/components/Popup";
 import Button from "@/components/Button";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import axios, { AxiosRequestConfig } from "axios";
-import ReactMarkdown from "react-markdown";
 import { cn } from "@/utils/classname";
 import { Transition } from "@headlessui/react";
+import { MarkdownRenderer } from "../SyntaxRenderer";
 
 interface ApiResponse<T> {
   messages: Array<T>;
@@ -166,6 +166,58 @@ const scrollToBottom = () => {
     top: document.documentElement.scrollHeight,
     behavior: "smooth",
   });
+};
+
+/**
+ * Each message box is an independent React component so hooks (useState, useEffect) are safe to use.
+ */
+const ChatMessageBox = ({
+  answer,
+  position,
+  isLoading = false,
+}: {
+  answer: string;
+  position: "left" | "right";
+  isLoading?: boolean;
+}) => {
+  useEffect(() => {
+    if (isLoading) {
+      const delayedScroll = setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+      return () => clearTimeout(delayedScroll);
+    }
+  }, [answer, isLoading]);
+  return (
+    <ChatField
+      className={cn(
+        position === "right" ? "left-[20%] right-0" : "right-[20%] left-0",
+        "shadow-md shadow-cyan-400/50 dark:shadow-cyan-600/50",
+      )}
+      style={{
+        minWidth: "120px",
+        width: "fit-content",
+        maxWidth: "80%", // override parent's width
+      }}
+    >
+      <div
+        className={cn(
+          "w-full px-4 justify-start",
+          "text-left dark:text-white word-wrap break-words rounded-md",
+        )}
+      >
+        <p
+          className={cn(
+            "w-full word-wrap break-words",
+            "rounded-sm p-2 overflow-y-auto resize-none backdrop-blur-lg",
+          )}
+        >
+          <MarkdownRenderer markdownText={answer} showDots={isLoading} />
+          {isLoading && <InlineDots />}
+        </p>
+      </div>
+    </ChatField>
+  );
 };
 
 // handle scrolling to the bottom of the page with debounce to avoid flickering
@@ -414,43 +466,6 @@ export const ChatBox = () => {
     </ChatField>
   );
 
-  const renderBox = (
-    answer: string,
-    position: "left" | "right",
-    index: number,
-    isLoading: boolean = false,
-  ) => (
-    <ChatField
-      key={index}
-      className={cn(
-        position === "right" ? "left-[20%] right-0" : "right-[20%] left-0",
-        "shadow-md shadow-cyan-400/50 dark:shadow-cyan-600/50",
-      )}
-      style={{
-        minWidth: "120px",
-        width: "fit-content",
-        maxWidth: "80%", // override parent's width
-      }}
-    >
-      <div
-        className={cn(
-          "w-full px-4 justify-start",
-          "text-left dark:text-white word-wrap break-words rounded-md",
-        )}
-      >
-        <p
-          className={cn(
-            "w-full word-wrap break-words",
-            "rounded-sm p-2 overflow-y-auto resize-none backdrop-blur-lg",
-          )}
-        >
-          <ReactMarkdown>{answer}</ReactMarkdown>
-          {isLoading && <Dots />}
-        </p>
-      </div>
-    </ChatField>
-  );
-
   const mixBox = (questions: any[], answers: any[]) => {
     const mixed: any[] = [];
     answers.forEach((answer, index) => {
@@ -464,31 +479,43 @@ export const ChatBox = () => {
     <div className="flex flex-col gap-8 w-full">
       {questions.length + answer.length > 0 &&
         mixBox(
-          questions.map((question, index) =>
-            renderBox(question, "left", index),
-          ),
-          answer.map((answer, index) =>
-            renderBox(
-              answer,
-              "right",
-              index,
-              index === answer.length - 1 && isAnswerPosting,
-            ),
-          ),
+          questions.map((question, index) => (
+            <ChatMessageBox
+              key={`question-box-${index}`}
+              answer={question}
+              position="left"
+              isLoading={false}
+            />
+          )),
+          answer.map((answer, index) => (
+            <ChatMessageBox
+              key={`answer-box-${index}`}
+              answer={answer}
+              position="right"
+              isLoading={index === answer.length - 1 && isAnswerPosting}
+            />
+          )),
         )}
       {questions.length + streamingAnswer.length > 0 &&
         mixBox(
-          questions.map((question, index) =>
-            renderBox(question, "left", index),
-          ),
-          streamingAnswer.map((answer, index) =>
-            renderBox(
-              answer,
-              "right",
-              index,
-              index === streamingAnswer.length - 1 && isStreamPosting,
-            ),
-          ),
+          questions.map((question, index) => (
+            <ChatMessageBox
+              key={`question-box-${index}`}
+              answer={question}
+              position="left"
+              isLoading={false}
+            />
+          )),
+          streamingAnswer.map((answer, index) => (
+            <ChatMessageBox
+              key={`answer-box-${index}`}
+              answer={answer}
+              position="right"
+              isLoading={
+                index === streamingAnswer.length - 1 && isStreamPosting
+              }
+            />
+          )),
         )}
       <div className={cn("relative w-full", isAtBottom ? "pb-6" : "pb-48")}>
         {/* add some buffer space so as to scroll to the bottom and display the send box */}
