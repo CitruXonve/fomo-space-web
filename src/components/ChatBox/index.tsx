@@ -1,11 +1,12 @@
-import { useRef, useState } from "react";
-import { Spinner } from "@/components/Spinner";
+import { useEffect, useRef, useState } from "react";
+import { Dots, Spinner } from "@/components/Spinner";
 import { Popup } from "@/components/Popup";
 import Button from "@/components/Button";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import axios, { AxiosRequestConfig } from "axios";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/utils/classname";
+import { Transition } from "@headlessui/react";
 
 interface ApiResponse<T> {
   messages: Array<T>;
@@ -136,12 +137,100 @@ export const useChatStreamMutation = (
   });
 };
 
+const ChatField = ({
+  children,
+  className,
+  style,
+  ...props
+}: {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  props?: React.HTMLAttributes<HTMLDivElement>;
+}) => (
+  <div
+    className={cn(
+      "flex flex-col items-center justify-center relative",
+      "dark:bg-gray-900/50 bg-white py-4 rounded-lg border-1 border-solid border-gray-200 dark:border-gray-700 shadow-sm w-full overflow-x-auto backdrop-blur-md",
+      className,
+    )}
+    style={style}
+    {...props}
+  >
+    {children}
+  </div>
+);
+
+const scrollToBottom = () => {
+  window.scrollTo({
+    top: document.documentElement.scrollHeight,
+    behavior: "smooth",
+  });
+};
+
+// handle scrolling to the bottom of the page with debounce to avoid flickering
+const useHandleScroll = () => {
+  const DEBOUNCE_MS = 200;
+  const AT_BOTTOM_THRESHOLD = 40;
+  const FLOATING_THRESHOLD = 160;
+  const SCROLL_COOLDOWN_MS = 500; // ignore "switch to floating" briefly after smooth scroll
+
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const isAtBottomRef = useRef(true);
+  const lastSwitchedToInFlowAt = useRef(0);
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const checkAtBottom = (isInitial = false) => {
+      const { scrollY, innerHeight } = window;
+      const { scrollHeight } = document.documentElement;
+      const distanceFromBottom = scrollHeight - scrollY - innerHeight;
+
+      if (isInitial) {
+        const atBottom = distanceFromBottom <= AT_BOTTOM_THRESHOLD;
+        isAtBottomRef.current = atBottom;
+        setIsAtBottom(atBottom);
+        return;
+      }
+
+      if (isAtBottomRef.current) {
+        const withinCooldown =
+          Date.now() - lastSwitchedToInFlowAt.current < SCROLL_COOLDOWN_MS;
+        if (!withinCooldown && distanceFromBottom > FLOATING_THRESHOLD) {
+          isAtBottomRef.current = false;
+          setIsAtBottom(false);
+        }
+      } else {
+        if (distanceFromBottom <= AT_BOTTOM_THRESHOLD) {
+          isAtBottomRef.current = true;
+          setIsAtBottom(true);
+          lastSwitchedToInFlowAt.current = Date.now();
+          scrollToBottom();
+        }
+      }
+    };
+    const debouncedCheck = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => checkAtBottom(false), DEBOUNCE_MS);
+    };
+    checkAtBottom(true); // initial sync without hysteresis
+    window.addEventListener("scroll", debouncedCheck, { passive: true });
+    window.addEventListener("resize", debouncedCheck);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("scroll", debouncedCheck);
+      window.removeEventListener("resize", debouncedCheck);
+    };
+  }, []);
+  return isAtBottom;
+};
+
 export const ChatBox = () => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [popupTitle, setPopupTitle] = useState("");
   const [popupMessage, setPopupMessage] = useState("Test");
-  const [answer, setAnswer] = useState("");
-  const [streamingAnswer, setStreamingAnswer] = useState("");
+  const [answer, setAnswer] = useState<string[]>([]);
+  const [streamingAnswer, setStreamingAnswer] = useState<string[]>([]);
+  const [questions, setQuestions] = useState<string[]>([]);
   const { mutate, isPending: isAnswerPosting } = usePostChat((error) => {
     console.error("Answer error:", error);
     setPopupTitle("Answer API Error");
@@ -153,7 +242,12 @@ export const ChatBox = () => {
     useChatStreamMutation(
       (chunk) => {
         // This is called for each chunk as it arrives
-        setStreamingAnswer((prev) => prev + chunk);
+        setStreamingAnswer((prev) => {
+          // prev + chunk
+          const newAnswer = prev.length > 0 ? [...prev] : [""];
+          newAnswer[newAnswer.length - 1] += chunk;
+          return newAnswer;
+        });
       },
       () => {
         // This is called when streaming is complete
@@ -169,6 +263,8 @@ export const ChatBox = () => {
   const testQuery = useTestQuery(false);
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const MAX_TEXTAREA_HEIGHT = 120; // ~max-h-30 (7.5rem), roughly 5 lines of text
+
+  const isAtBottom = useHandleScroll();
 
   const resizeTextarea = () => {
     const textarea = promptRef.current;
@@ -195,6 +291,7 @@ export const ChatBox = () => {
       });
   };
   const handleSend = (prompt: string) => {
+    setQuestions((prev) => [...prev, prompt]);
     mutate(prompt, {
       onSuccess: (data) => {
         const response = data as ChatResponse;
@@ -208,13 +305,15 @@ export const ChatBox = () => {
         if (answer === "") {
           throw new Error("Empty answer");
         }
-        setAnswer(answer);
+        setAnswer((prev) => [...prev, answer]);
       },
     });
   };
   const handleStreamSend = (prompt: string) => {
     // Clear previous streaming answer
-    setStreamingAnswer("");
+    // setStreamingAnswer("");
+    setQuestions((prev) => [...prev, prompt]);
+    setStreamingAnswer((prev) => [...prev, ""]);
     streamMutate(prompt);
   };
 
@@ -231,11 +330,18 @@ export const ChatBox = () => {
     onSubmit(value);
   };
 
-  return (
-    <div
+  const SendBox = ({
+    className,
+    title,
+  }: {
+    className?: string;
+    title?: string;
+  }) => (
+    <ChatField
       className={cn(
-        "flex flex-col items-center justify-center",
-        "dark:bg-gray-900/50 bg-white py-4 rounded-lg border-1 border-solid border-gray-200 dark:border-gray-700 shadow-sm w-full max-w-2xl overflow-x-auto backdrop-blur-md",
+        "max-w-2xl mx-auto",
+        "flex relative justify-end w-full mx-auto",
+        className,
       )}
     >
       <Popup
@@ -252,9 +358,7 @@ export const ChatBox = () => {
           e.preventDefault();
         }}
       >
-        <h3 className="font-semibold dark:text-white">
-          What's the challenge today?
-        </h3>
+        {title && <h3 className="font-semibold dark:text-white">{title}</h3>}
         <textarea
           required
           placeholder="Prompt or describe the problem..."
@@ -307,24 +411,149 @@ export const ChatBox = () => {
           </Button>
         </span>
       </form>
-      {(answer || streamingAnswer) && (
-        <div className="mt-4 w-full px-4">
-          <h3 className="font-semibold my-2">Reply</h3>
-          <div className="w-full bg-gray-100 text-sm text-gray-600 word-wrap break-words border-1 border-gray-300 rounded-md p-2">
-            <div className="text-left">
-              <ReactMarkdown>{streamingAnswer || answer}</ReactMarkdown>
-            </div>
-            {(isAnswerPosting || isStreamPosting) && (
-              <>
-                <br />
-                <span className="inline-block mt-1 animate-pulse">
-                  <Spinner size="md" />
-                </span>
-              </>
-            )}
-          </div>
-        </div>
+    </ChatField>
+  );
+
+  const renderBox = (
+    answer: string,
+    position: "left" | "right",
+    index: number,
+    isLoading: boolean = false,
+  ) => (
+    <ChatField
+      key={index}
+      className={cn(
+        position === "right" ? "left-[20%] right-0" : "right-[20%] left-0",
+        "shadow-md shadow-cyan-400/50 dark:shadow-cyan-600/50",
       )}
+      style={{
+        minWidth: "120px",
+        width: "fit-content",
+        maxWidth: "80%", // override parent's width
+      }}
+    >
+      <div
+        className={cn(
+          "w-full px-4 justify-start",
+          "text-left dark:text-white word-wrap break-words rounded-md",
+        )}
+      >
+        <p
+          className={cn(
+            "w-full word-wrap break-words",
+            "rounded-sm p-2 overflow-y-auto resize-none backdrop-blur-lg",
+          )}
+        >
+          <ReactMarkdown>{answer}</ReactMarkdown>
+          {isLoading && <Dots />}
+        </p>
+      </div>
+    </ChatField>
+  );
+
+  const mixBox = (questions: any[], answers: any[]) => {
+    const mixed: any[] = [];
+    answers.forEach((answer, index) => {
+      mixed.push(questions[index], answer);
+    });
+    mixed.concat(questions.slice(answers.length));
+    return mixed;
+  };
+
+  return (
+    <div className="flex flex-col gap-8 w-full">
+      {questions.length + answer.length > 0 &&
+        mixBox(
+          questions.map((question, index) =>
+            renderBox(question, "left", index),
+          ),
+          answer.map((answer, index) =>
+            renderBox(
+              answer,
+              "right",
+              index,
+              index === answer.length - 1 && isAnswerPosting,
+            ),
+          ),
+        )}
+      {questions.length + streamingAnswer.length > 0 &&
+        mixBox(
+          questions.map((question, index) =>
+            renderBox(question, "left", index),
+          ),
+          streamingAnswer.map((answer, index) =>
+            renderBox(
+              answer,
+              "right",
+              index,
+              index === streamingAnswer.length - 1 && isStreamPosting,
+            ),
+          ),
+        )}
+      <div className={cn("relative w-full", isAtBottom ? "pb-6" : "pb-48")}>
+        {/* add some buffer space so as to scroll to the bottom and display the send box */}
+        <Transition
+          show={isAtBottom}
+          enter="transition-transform duration-300 ease-in-out"
+          enterFrom="translate-y-full opacity-0"
+          enterTo="translate-y-0 opacity-100"
+          leave="transition-transform duration-300 ease-in-out"
+          leaveFrom="translate-y-0 opacity-100"
+          leaveTo="translate-y-full opacity-0"
+        >
+          <div className="shadow-lg">
+            <SendBox
+              className="shadow-cyan-400/30 dark:shadow-cyan-600/30"
+              title={
+                questions.length === 0
+                  ? "What's the challenge today?"
+                  : undefined
+              }
+            />
+          </div>
+        </Transition>
+        <Transition
+          show={!isAtBottom}
+          enter="transition-transform duration-300 ease-in-out"
+          enterFrom="translate-y-full opacity-0"
+          enterTo="translate-y-0 opacity-100"
+          leave="transition-transform duration-300 ease-in-out"
+          leaveFrom="translate-y-0 opacity-100"
+          leaveTo="translate-y-full opacity-0"
+        >
+          <div
+            className="fixed bottom-0 left-0 right-0 z-20 flex justify-center px-4 pb-4"
+            style={{
+              background:
+                "linear-gradient(to bottom, rgba(24,24,27,0) 0%, rgba(24,24,27,0.6) 10%)",
+            }}
+          >
+            <div className="w-full max-w-2xl mb-4 flex flex-col items-center shadow-lg shadow-blue-400/30 dark:shadow-blue-600/30">
+              <button
+                type="button"
+                className={cn(
+                  "self-center py-1 px-3",
+                  "bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700",
+                  "text-gray-700 font-semibold text-xs text-gray-700 dark:text-gray-300",
+                  "rounded-tl-md rounded-tr-md shadow",
+                  "border-l-2 border-r-2 border-t-2 border-b-0 border-gray-300 dark:border-cyan-500/50",
+                )}
+                onClick={scrollToBottom}
+                aria-label="Scroll to Bottom"
+              >
+                ↓ Scroll to Bottom ↓
+              </button>
+              <SendBox
+                title={
+                  questions.length === 0
+                    ? "What's the challenge today?"
+                    : undefined
+                }
+              />
+            </div>
+          </div>
+        </Transition>
+      </div>
     </div>
   );
 };

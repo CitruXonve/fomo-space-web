@@ -6,9 +6,7 @@ export default function HomePage() {
   return (
     <>
       <PrimaryBackground />
-      <div
-        className={cn("text-center relative z-10 top-[60px]", "left-0 mx-auto")}
-      >
+      <div className={cn("text-center relative top-[60px]", "left-0 mx-auto")}>
         <h1 className="text-2xl font-semibold text-white mb-4">
           Tension of Missing Out
         </h1>

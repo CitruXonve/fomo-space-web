@@ -30,3 +30,26 @@ export const Spinner: React.FC<SpinnerProps> = ({ size = "md", className }) => {
     </svg>
   );
 };
+
+import React, { useEffect, useRef, useState } from "react";
+
+export const Dots = ({ className }: { className?: string }) => {
+  const dotStates = [".", "..", "..."];
+  const [index, setIndex] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      setIndex((prev) => (prev + 1) % dotStates.length);
+    }, 400);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  return (
+    <span className={className} aria-live="polite">
+      {dotStates[index]}
+    </span>
+  );
+};
