@@ -1,6 +1,3 @@
-import UpperBackgroundImage from "@/assets/photo_2026-02-04 22.10.52.jpeg";
-import LowerBackgroundImage from "@/assets/star-trail-photography.jpg";
-
 const UpperBackgroundMask = (
   <mask id="upperBackgroundMask">
     <g fill="none" stroke="white" filter="url(#strongGlow)">
@@ -829,7 +826,7 @@ const PrimaryBackground = () => {
         </g>
       </svg>
       <img
-        src={UpperBackgroundImage}
+        src={`${import.meta.env.VITE_ASSET_URL}photo_2026-02-04%2022.10.52.jpeg`}
         alt="background"
         className="absolute top-0 left-0 min-w-full min-h-full object-cover pointer-events-none"
         style={{
@@ -843,7 +840,7 @@ const PrimaryBackground = () => {
         }}
       />
       <img
-        src={LowerBackgroundImage}
+        src={`${import.meta.env.VITE_ASSET_URL}star-trail-photography.jpg`}
         alt="background"
         className="absolute bottom-[-300px] left-0 min-w-full min-h-full object-cover pointer-events-none"
         style={{
